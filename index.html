@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finish Line - one video, one notepad</title>
+<meta name="color-scheme" content="dark light">
+<style>
+:root{
+  --bg:#0c0d10;--panel:#14161b;--panel2:#1a1d23;--line:#262a32;--text:#e8eaee;--muted:#8b919c;
+  --accent:#7c9cff;--accent-ink:#0b1022;--accent-soft:rgba(124,156,255,.14);--ok:#58d6a0;--danger:#ff7a7a;
+  --shadow:0 10px 40px rgba(0,0,0,.45);--radius:14px;
+}
+[data-theme="light"]{
+  --bg:#f4f5f8;--panel:#ffffff;--panel2:#f0f2f6;--line:#e1e4ea;--text:#16181d;--muted:#667085;
+  --accent:#3b5bdb;--accent-ink:#ffffff;--accent-soft:rgba(59,91,219,.1);--ok:#12a36b;--danger:#d93a3a;
+  --shadow:0 10px 30px rgba(20,30,60,.10);
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{min-height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+form.load{flex:1;display:flex;gap:8px;min-width:0}
+.load input{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:none}
+.load input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:.15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:5px 9px;font-size:13px;border-radius:8px}
+.err{color:var(--danger);font-size:13px;padding:6px 16px 0;min-height:0}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding:16px;align-items:start;max-width:1500px;width:100%;margin:0 auto}
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+.video{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.video iframe,.video #player{position:absolute;inset:0;width:100%;height:100%;border:0}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;height:100%;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:var(--radius)}
+.empty h2{color:var(--text);font-size:20px;letter-spacing:-.01em}
+.empty p{max-width:380px}
+.titlebar{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.titlebar h1{font-size:17px;font-weight:650;letter-spacing:-.01em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.progress{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+.meta{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.toast{display:none;align-items:center;gap:10px;justify-content:space-between;background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:10px 14px}
+.toast.show{display:flex}
+.opts{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.opts label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.opts input{accent-color:var(--accent)}
+aside{display:flex;flex-direction:column;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);min-width:0}
+aside h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+textarea{width:100%;min-height:92px;resize:vertical;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;font-size:16px}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.hint{font-size:12px;color:var(--muted)}
+.notes{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto;padding-right:2px}
+.note{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;gap:10px;align-items:flex-start}
+.note .ts{background:var(--accent-soft);color:var(--accent);border:0;border-radius:7px;padding:2px 8px;font-variant-numeric:tabular-nums;font-weight:600;font-size:13px;flex:none}
+.note .ts:hover{background:var(--accent);color:var(--accent-ink)}
+.note .tx{flex:1;white-space:pre-wrap;word-break:break-word;min-width:0}
+.note .x{background:none;border:0;color:var(--muted);padding:0 4px;font-size:18px;line-height:1}
+.note .x:hover{color:var(--danger)}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:3px 10px}
+.chip b{color:var(--text)}
+.sessions{max-width:1500px;width:100%;margin:0 auto;padding:0 16px 24px}
+.sessions h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:4px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left;transition:.15s}
+.card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.card .t{font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card .s{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.card .done{color:var(--ok);font-weight:600}
+.cardwrap{position:relative}
+.cardwrap .del{position:absolute;top:6px;right:8px;background:none;border:0;color:var(--muted);font-size:16px}
+.cardwrap .del:hover{color:var(--danger)}
+.sr{position:absolute;left:-9999px}
+@media (max-width:900px){
+  main{grid-template-columns:1fr;padding:12px;gap:12px}
+  .video{border-radius:10px;margin:0 -2px}
+  .notes{max-height:none}
+  header{flex-wrap:wrap;padding:10px 12px}
+  #themeBtn{margin-left:auto}
+  form.load{order:3;flex-basis:100%}
+}
+@media print{
+  header,.stage,.sessions,.noprint{display:none!important}
+  body{background:#fff;color:#000}
+  main{display:block;padding:0}
+  aside{border:0;box-shadow:none;background:#fff;padding:0}
+  .notes{max-height:none;overflow:visible}
+  .note{background:#fff;border-color:#ccc;break-inside:avoid}
+  .note .ts{color:#000;background:#eee}
+  .printhead{display:block!important}
+}
+.printhead{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><span class="dot"></span><span class="n">Finish Line</span></div>
+  <form class="load" id="loadForm" autocomplete="off">
+    <input id="url" type="url" inputmode="url" placeholder="Paste a YouTube link" aria-label="YouTube link">
+    <button class="btn primary" type="submit">Watch</button>
+  </form>
+  <button class="btn ghost" id="themeBtn" type="button" aria-label="Switch theme" title="Switch theme">&#9680;</button>
+</header>
+<div class="err" id="err" role="alert"></div>
+
+<main>
+  <section class="stage">
+    <div class="video" id="videoBox">
+      <div class="empty" id="empty">
+        <h2>One video. No escape routes.</h2>
+        <p>Paste a link above. You get that video and a notepad, nothing else: no feed, no suggestions, no skip.</p>
+      </div>
+    </div>
+    <div class="titlebar" id="titlebar" hidden>
+      <h1 id="vtitle">Video</h1>
+      <button class="btn sm" id="doneBtn" type="button">Mark finished</button>
+    </div>
+    <div id="prog" hidden>
+      <div class="progress"><i id="bar"></i></div>
+      <div class="meta"><span id="cur">0:00</span><span id="watched">watched 0 min this sitting</span><span id="dur">0:00</span></div>
+    </div>
+    <div class="toast" id="toast" role="status"><span id="toastTx"></span><button class="btn sm" id="toastOk" type="button">Keep going</button></div>
+    <div class="opts" id="opts" hidden>
+      <label><input type="checkbox" id="optFocus" checked> Pause if I leave this tab</label>
+      <label><input type="checkbox" id="optNudge" checked> Gentle check-in every <select id="nudgeMin" style="background:var(--panel2);color:inherit;border:1px solid var(--line);border-radius:6px"><option>10</option><option selected>15</option><option>20</option><option>30</option></select> min</label>
+    </div>
+  </section>
+
+  <aside id="side">
+    <div class="row"><h3>Notes</h3><div class="stats"><span class="chip"><b id="nCount">0</b> notes</span><span class="chip"><b id="streak">0</b> finished</span></div></div>
+    <textarea id="noteIn" placeholder="Type a note. Enter saves it at the current second. Shift+Enter for a new line." aria-label="Note"></textarea>
+    <div class="row">
+      <span class="hint">Stamped at <b id="stampNow">0:00</b></span>
+      <button class="btn primary" id="addNote" type="button">Add note</button>
+    </div>
+    <div class="notes" id="notes"></div>
+    <div class="row noprint">
+      <button class="btn sm" id="expMd" type="button">Export .md</button>
+      <button class="btn sm" id="expPdf" type="button">Save as PDF</button>
+      <button class="btn sm ghost" id="copyMd" type="button">Copy</button>
+    </div>
+    <div class="printhead" id="printhead"></div>
+  </aside>
+</main>
+
+<section class="sessions" id="sessionsWrap">
+  <h3>Saved sessions</h3>
+  <div class="grid" id="sessions"></div>
+</section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var KEY="finishline.v1";
+var $=function(id){return document.getElementById(id)};
+var state={sessions:{},theme:null,focus:true,nudge:true,nudgeMin:15,finished:0};
+var player=null,apiReady=false,apiFailed=false,cur=null,tick=null,sittingSec=0,sinceNudge=0,pendingStart=0;
+
+function load(){try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);for(var k in o)state[k]=o[k]}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+load();
+
+/* theme */
+function applyTheme(t){
+  if(!t)t=(window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches)?"light":"dark";
+  document.documentElement.setAttribute("data-theme",t);
+}
+applyTheme(state.theme);
+$("themeBtn").onclick=function(){
+  var t=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
+  state.theme=t;applyTheme(t);save();
+};
+
+/* url parsing */
+function parseId(s){
+  s=(s||"").trim();if(!s)return null;
+  if(/^[A-Za-z0-9_-]{11}$/.test(s))return{id:s,t:0};
+  var u;try{u=new URL(/^https?:\/\//i.test(s)?s:"https://"+s)}catch(e){return null}
+  var h=u.hostname.replace(/^www\.|^m\.|^music\./,"");
+  var id=null;
+  if(h==="youtu.be")id=u.pathname.split("/")[1];
+  else if(h==="youtube.com"||h==="youtube-nocookie.com"){
+    var p=u.pathname.split("/").filter(Boolean);
+    if(p[0]==="watch")id=u.searchParams.get("v");
+    else if(["shorts","embed","live","v"].indexOf(p[0])>-1)id=p[1];
+  }
+  if(!id||!/^[A-Za-z0-9_-]{11}$/.test(id))return null;
+  var t=u.searchParams.get("t")||u.searchParams.get("start")||"",sec=0;
+  var m=/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/.exec(t);
+  if(m&&t)sec=(+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0);
+  return{id:id,t:sec};
+}
+window.__parseId=parseId;
+
+function fmt(s){
+  s=Math.max(0,Math.floor(s||0));var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  var p=function(n){return n<10?"0"+n:""+n};
+  return h?h+":"+p(m)+":"+p(x):m+":"+p(x);
+}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function setErr(m){$("err").textContent=m||""}
+
+/* YouTube API */
+window.onYouTubeIframeAPIReady=function(){apiReady=true;if(cur&&!player)makePlayer()};
+(function(){
+  var s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";s.async=true;
+  s.onerror=function(){apiFailed=true;if(cur&&!player)fallbackEmbed()};
+  document.head.appendChild(s);
+  setTimeout(function(){if(!apiReady){apiFailed=true;if(cur&&!player)fallbackEmbed()}},9000);
+})();
+
+function resetVideoBox(){
+  var box=$("videoBox");box.innerHTML="";
+  if(player&&player.destroy){try{player.destroy()}catch(e){}}
+  player=null;
+  var d=document.createElement("div");d.id="player";box.appendChild(d);
+}
+function makePlayer(){
+  resetVideoBox();
+  try{
+    player=new YT.Player("player",{
+      host:"https://www.youtube-nocookie.com",
+      videoId:cur.id,
+      playerVars:{rel:0,modestbranding:1,playsinline:1,iv_load_policy:3,fs:1,start:pendingStart||0,origin:location.origin&&location.origin!=="null"&&/^https?:/.test(location.origin)?location.origin:undefined},
+      events:{onReady:onReady,onStateChange:onState,onError:function(e){setErr(location.protocol==="file:"?"YouTube refuses to play embedded videos when this page is opened straight from a file (error "+e.data+"). Put this page on a web address (any free static host) and it works.":"YouTube would not play this video here (code "+e.data+"). It may block embedding or be private.")}}
+    });
+  }catch(e){fallbackEmbed()}
+}
+function fallbackEmbed(){
+  if(!cur)return;
+  var box=$("videoBox");box.innerHTML="";
+  var f=document.createElement("iframe");
+  f.src="https://www.youtube-nocookie.com/embed/"+cur.id+"?rel=0&modestbranding=1&playsinline=1&start="+(pendingStart||0);
+  f.allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen";f.allowFullscreen=true;f.title="Video";
+  box.appendChild(f);
+  setErr("Basic mode: the video plays, but timestamps and jump-back need YouTube's player API, which did not load. Notes will stamp at 0:00 until it does.");
+}
+function onReady(){
+  var d=player.getVideoData&&player.getVideoData();
+  if(d&&d.title){cur.title=d.title;$("vtitle").textContent=d.title;document.title=d.title+" - Finish Line";remember()}
+  $("dur").textContent=fmt(player.getDuration());
+}
+function onState(e){
+  if(e.data===1){var d=player.getVideoData();if(d&&d.title&&cur.title!==d.title){cur.title=d.title;$("vtitle").textContent=d.title;remember()}$("dur").textContent=fmt(player.getDuration())}
+  if(e.data===0){markDone(true)}
+}
+
+function curTime(){try{return player&&player.getCurrentTime?player.getCurrentTime():0}catch(e){return 0}}
+function playing(){try{return player&&player.getPlayerState&&player.getPlayerState()===1}catch(e){return false}}
+
+/* sessions */
+function remember(){
+  if(!cur)return;
+  var s=state.sessions[cur.id]||(state.sessions[cur.id]={id:cur.id,title:"",notes:[],pos:0,dur:0,finished:false});
+  if(cur.title)s.title=cur.title;
+  s.updated=Date.now();save();renderSessions();
+}
+function openVideo(id,t){
+  setErr("");
+  cur={id:id,title:(state.sessions[id]&&state.sessions[id].title)||""};
+  var s=state.sessions[id];
+  pendingStart=t||(s&&s.pos>5&&!s.finished?Math.floor(s.pos):0);
+  sittingSec=0;sinceNudge=0;hideToast();
+  $("titlebar").hidden=false;$("prog").hidden=false;$("opts").hidden=false;
+  $("vtitle").textContent=cur.title||"Loading...";
+  document.title=(cur.title||"Video")+" - Finish Line";
+  remember();renderNotes();syncDone();
+  if(apiReady)makePlayer();else if(apiFailed)fallbackEmbed();else{resetVideoBox();$("videoBox").firstChild.style.background="#000"}
+  try{history.replaceState(null,"","#"+id)}catch(e){}
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$("loadForm").addEventListener("submit",function(e){
+  e.preventDefault();
+  var r=parseId($("url").value);
+  if(!r){setErr("That does not look like a YouTube link. Try a watch, youtu.be or shorts link.");return}
+  $("url").value="";$("url").blur();openVideo(r.id,r.t);
+});
+
+/* notes */
+function sess(){return cur&&state.sessions[cur.id]}
+function addNote(){
+  var s=sess();if(!s)return;
+  var v=$("noteIn").value.trim();if(!v)return;
+  var t=Math.floor(curTime());
+  s.notes.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),t:t,text:v});
+  s.notes.sort(function(a,b){return a.t-b.t});
+  $("noteIn").value="";s.updated=Date.now();save();renderNotes();renderSessions();
+  var n=$("notes");n.scrollTop=n.scrollHeight;
+}
+$("addNote").onclick=addNote;
+$("noteIn").addEventListener("keydown",function(e){
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();addNote()}
+});
+$("noteIn").addEventListener("focus",updateStamp);
+function renderNotes(){
+  var s=sess(),box=$("notes");box.innerHTML="";
+  var list=s?s.notes:[];
+  $("nCount").textContent=list.length;
+  $("streak").textContent=state.finished||0;
+  if(!list.length){box.innerHTML='<div class="hint">No notes yet. Pause on a good moment and write one. Click a time to jump back to it.</div>'}
+  list.forEach(function(n){
+    var d=document.createElement("div");d.className="note";
+    d.innerHTML='<button class="ts" type="button" title="Jump to this moment">'+fmt(n.t)+'</button><div class="tx">'+esc(n.text)+'</div><button class="x" type="button" aria-label="Delete note">&times;</button>';
+    d.querySelector(".ts").onclick=function(){seek(n.t)};
+    d.querySelector(".x").onclick=function(){s.notes=s.notes.filter(function(m){return m.id!==n.id});save();renderNotes();renderSessions()};
+    box.appendChild(d);
+  });
+}
+function seek(t){try{if(player&&player.seekTo){player.seekTo(t,true);player.playVideo()}}catch(e){}}
+window.__seek=seek;
+
+/* finish */
+function syncDone(){var s=sess();$("doneBtn").textContent=s&&s.finished?"Finished \u2713":"Mark finished"}
+function markDone(auto){
+  var s=sess();if(!s)return;
+  if(!s.finished){s.finished=true;state.finished=(state.finished||0)+1}
+  else if(!auto){s.finished=false;state.finished=Math.max(0,(state.finished||0)-1)}
+  save();syncDone();renderNotes();renderSessions();
+  if(s.finished)showToast("You finished it. Export your notes before you close the tab.","Export",function(){exportMd()});
+}
+$("doneBtn").onclick=function(){markDone(false)};
+
+/* progress loop */
+setInterval(function(){
+  updateStamp();
+  if(!cur||!player)return;
+  var t=curTime(),d=0;try{d=player.getDuration()||0}catch(e){}
+  if(d){$("bar").style.width=Math.min(100,t/d*100)+"%";$("dur").textContent=fmt(d)}
+  $("cur").textContent=fmt(t);
+  var s=sess();if(s){s.pos=t;s.dur=d;if(Math.floor(t)%5===0)save()}
+  if(playing()){
+    sittingSec++;sinceNudge++;
+    $("watched").textContent="watched "+Math.floor(sittingSec/60)+" min this sitting";
+    if(state.nudge&&sinceNudge>=state.nudgeMin*60){
+      sinceNudge=0;
+      var left=d?Math.max(0,Math.round((d-t)/60)):0;
+      showToast(Math.floor(sittingSec/60)+" minutes in"+(left?", about "+left+" left":"")+". Still with it? You can finish this.","Keep going",hideToast);
+    }
+  }
+},1000);
+function updateStamp(){$("stampNow").textContent=fmt(curTime())}
+
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden&&state.focus&&playing()){try{player.pauseVideo()}catch(e){}}
+});
+$("optFocus").checked=state.focus!==false;$("optNudge").checked=state.nudge!==false;$("nudgeMin").value=String(state.nudgeMin||15);
+$("optFocus").onchange=function(){state.focus=this.checked;save()};
+$("optNudge").onchange=function(){state.nudge=this.checked;save()};
+$("nudgeMin").onchange=function(){state.nudgeMin=+this.value;sinceNudge=0;save()};
+
+var toastCb=null;
+function showToast(msg,btn,cb){$("toastTx").textContent=msg;$("toastOk").textContent=btn;toastCb=cb;$("toast").classList.add("show")}
+function hideToast(){$("toast").classList.remove("show")}
+$("toastOk").onclick=function(){var c=toastCb;hideToast();if(c)c()};
+
+/* export */
+function mdText(){
+  var s=sess();if(!s)return"";
+  var out="# "+(s.title||"Video notes")+"\n\nhttps://youtu.be/"+s.id+"\n\n";
+  s.notes.forEach(function(n){out+="- ["+fmt(n.t)+"](https://youtu.be/"+s.id+"?t="+n.t+") "+n.text.replace(/\n/g,"\n  ")+"\n"});
+  return out;
+}
+function exportMd(){
+  var s=sess();if(!s)return;
+  var b=new Blob([mdText()],{type:"text/markdown"}),a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download=((s.title||"notes").replace(/[^\w\- ]+/g,"").trim().slice(0,60)||"notes")+".md";
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);
+}
+$("expMd").onclick=exportMd;
+$("expPdf").onclick=function(){var s=sess();if(!s)return;$("printhead").innerHTML="<h2>"+esc(s.title||"Video notes")+"</h2><p>https://youtu.be/"+esc(s.id)+"</p>";window.print()};
+$("copyMd").onclick=function(){
+  var t=mdText(),b=this;
+  function ok(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy"},1200)}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,function(){});else{var x=document.createElement("textarea");x.value=t;document.body.appendChild(x);x.select();try{document.execCommand("copy");ok()}catch(e){}x.remove()}
+};
+
+/* sessions list */
+function renderSessions(){
+  var box=$("sessions");box.innerHTML="";
+  var arr=Object.keys(state.sessions).map(function(k){return state.sessions[k]}).sort(function(a,b){return (b.updated||0)-(a.updated||0)});
+  $("sessionsWrap").style.display=arr.length?"":"none";
+  arr.forEach(function(s){
+    var w=document.createElement("div");w.className="cardwrap";
+    var pct=s.dur?Math.min(100,Math.round(s.pos/s.dur*100)):0;
+    w.innerHTML='<button class="card" type="button"><span class="t">'+esc(s.title||("youtu.be/"+s.id))+'</span><span class="s"><span>'+s.notes.length+' notes</span><span class="'+(s.finished?"done":"")+'">'+(s.finished?"Finished":(pct?pct+"% watched":"Not started"))+'</span></span></button><button class="del" type="button" aria-label="Remove session">&times;</button>';
+    w.querySelector(".card").onclick=function(){openVideo(s.id,0)};
+    w.querySelector(".del").onclick=function(){if(confirm("Remove this session and its notes?")){delete state.sessions[s.id];save();if(cur&&cur.id===s.id){cur=null;location.hash="";location.reload()}else renderSessions()}};
+    box.appendChild(w);
+  });
+}
+renderSessions();renderNotes();
+
+var h=location.hash.replace("#","");
+if(/^[A-Za-z0-9_-]{11}$/.test(h))openVideo(h,0);
+})();
+</script>
+</body>
+</html>
